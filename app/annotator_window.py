@@ -257,8 +257,6 @@ class AnnotatorWindow(QMainWindow):
             ("下一张", self.next_image),
             ("自动标注当前图", self.annotate_current),
             ("自动标注全部", self.annotate_all),
-            ("新建标注框", self.canvas_start_create),
-            ("删除选中框", self.canvas_delete),
             ("适应窗口", self.fit_canvas),
         ):
             action = QAction(text, self)
@@ -311,8 +309,9 @@ class AnnotatorWindow(QMainWindow):
         self.canvas.load_failed.connect(self._show_error)
         center_layout.addWidget(self.canvas, 1)
         self.canvas_tip = QLabel(
-            "操作：单击选框，拖动框移动，拖动四角蓝色控制点改大小；"
-            "B 后在图上拖拽新建，Delete 删除。每次修改都会立即保存。"
+            "操作：直接在图片空白处按住左键拖动即可新建框；拖动已有框可移动，"
+            "拖动四角蓝色控制点可改大小。单击框后，点击框旁的“删除此框”。"
+            "每次修改都会立即保存。"
         )
         self.canvas_tip.setWordWrap(True)
         self.canvas_tip.setStyleSheet("color:#aeb8c5;padding:4px")
@@ -425,19 +424,17 @@ class AnnotatorWindow(QMainWindow):
         edit_group = QGroupBox("人工修改")
         edit_layout = QVBoxLayout(edit_group)
         self.selected_class_combo = NoWheelComboBox()
-        self.selected_class_combo.setToolTip("新建标注框使用此类别；也可将它应用到当前选中框。")
+        self.selected_class_combo.setToolTip("直接拖动新建框时使用此类别；也可将它应用到当前选中框。")
         apply_class = QPushButton("将此类别应用到选中框")
         apply_class.clicked.connect(self._apply_selected_class)
-        create = QPushButton("在图上拖拽新建框（B）")
-        create.clicked.connect(self.canvas_start_create)
-        delete = QPushButton("删除选中框（Delete）")
-        delete.clicked.connect(self.canvas_delete)
         edit_layout.addWidget(QLabel("当前类别："))
         edit_layout.addWidget(self.selected_class_combo)
         edit_layout.addWidget(apply_class)
-        edit_layout.addWidget(create)
-        edit_layout.addWidget(delete)
-        edit_layout.addWidget(self._help("移动、改大小、新增、改类和删除都会在操作结束时立即原子保存到同名 txt。"))
+        edit_layout.addWidget(self._help(
+            "无需进入新建模式：在图片空白处直接按住左键拖动即可拉框。"
+            "单击已有框后，其旁边会出现“删除此框”按钮。移动、改大小、新增、"
+            "改类和删除都会立即原子保存到同名 txt。"
+        ))
         layout.addWidget(edit_group)
 
         batch_group = QGroupBox("批量处理")
@@ -504,7 +501,6 @@ class AnnotatorWindow(QMainWindow):
 
     def _build_shortcuts(self) -> None:
         for key, slot in (
-            ("B", self.canvas_start_create),
             ("A", self.previous_image),
             ("D", self.next_image),
             (QKeySequence.StandardKey.Save, self.save_current),
@@ -812,17 +808,11 @@ class AnnotatorWindow(QMainWindow):
         )
         self.save_current()
 
-    def canvas_start_create(self) -> None:
-        if not self.classes():
-            self._show_error("请先输入并保存至少一个类别。")
-            return
-        self.canvas.start_create_mode()
-        self.status_label.setText("新建框模式：请在图片上按住左键拖拽，Esc 取消。")
-
     def _on_new_box(self, rect: QRectF) -> None:
         classes = self.classes()
         class_id = self.selected_class_combo.currentIndex()
         if not classes or class_id < 0:
+            self.status_label.setText("无法新建框：请先输入并保存至少一个类别。")
             return
         self.canvas.add_box(
             BoundingBox(
@@ -842,10 +832,6 @@ class AnnotatorWindow(QMainWindow):
             return
         if classes and class_id >= 0:
             self.canvas.set_box_class(box_index, class_id, classes[class_id])
-
-    def canvas_delete(self) -> None:
-        if not self.canvas.delete_selected():
-            self.status_label.setText("请先单击选中要删除的标注框。")
 
     def fit_canvas(self) -> None:
         self.canvas.fit_image()

@@ -45,8 +45,10 @@ def test_parameter_widgets_ignore_mouse_wheel(qapp) -> None:
     assert integer.value() == 50
     assert decimal.value() == 0.5
     assert combo.currentIndex() == 1
-    parent.deleteLater()
-    qapp.processEvents()
+    # On Windows' offscreen Qt platform, processing deferred deletion
+    # immediately after synthetic wheel events can access an already-freed
+    # native event. Synchronous close keeps the same behavior assertion stable.
+    parent.close()
 
 
 def test_settings_panel_has_no_horizontal_overflow(qapp) -> None:

@@ -6,6 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
+    QGraphicsItem,
     QGraphicsPixmapItem,
     QGraphicsRectItem,
     QGraphicsScene,
@@ -19,6 +20,49 @@ from utils.image_utils import bgr_to_qimage, read_image
 
 
 PALETTE = ["#ff4f64", "#45d483", "#4ba3ff", "#d17bff", "#ffb84d", "#31d4d7"]
+
+
+class DeleteBoxButtonItem(QGraphicsRectItem):
+    """Fixed-screen-size scene button used to delete the selected box."""
+
+    def __init__(self, canvas: "AnnotationCanvas") -> None:
+        super().__init__(QRectF(0, 0, 82, 30))
+        self.canvas = canvas
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
+        self.setAcceptHoverEvents(True)
+        self.setZValue(1000)
+        self.setPen(QPen(QColor("#ff7a82"), 1))
+        self.setBrush(QBrush(QColor("#d83b46")))
+        self.setToolTip("删除当前选中的标注框，并立即保存 txt。")
+        self.label = QGraphicsSimpleTextItem("删除此框", self)
+        self.label.setFont(QFont("Microsoft YaHei UI", 10, QFont.Weight.DemiBold))
+        self.label.setBrush(QBrush(QColor("white")))
+        bounds = self.label.boundingRect()
+        self.label.setPos((82 - bounds.width()) / 2, (30 - bounds.height()) / 2 - 1)
+
+    def hoverEnterEvent(self, event) -> None:  # noqa: N802
+        self.setBrush(QBrush(QColor("#f04b56")))
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event) -> None:  # noqa: N802
+        self.setBrush(QBrush(QColor("#d83b46")))
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setBrush(QBrush(QColor("#ad2933")))
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setBrush(QBrush(QColor("#f04b56")))
+            if self.rect().contains(event.pos()):
+                self.canvas.delete_selected()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
 
 class EditableBoxItem(QGraphicsRectItem):
@@ -98,6 +142,8 @@ class EditableBoxItem(QGraphicsRectItem):
         self.review_threshold = review_threshold
         self.setRect(QRectF(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1))
         self._update_style()
+        if self.isSelected():
+            self.canvas.position_delete_button(self)
 
     def hoverMoveEvent(self, event) -> None:  # noqa: N802
         handle = self._hit_handle(event.pos())
@@ -138,6 +184,7 @@ class EditableBoxItem(QGraphicsRectItem):
         rect = self.canvas.clamp_rect(rect, moving=self._mode == "move")
         self.setRect(rect)
         self._position_label()
+        self.canvas.position_delete_button(self)
         event.accept()
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
@@ -185,6 +232,7 @@ class AnnotationCanvas(QGraphicsView):
         self._create_mode = False
         self._create_start: QPointF | None = None
         self._draft_item: QGraphicsRectItem | None = None
+        self._delete_button_item: DeleteBoxButtonItem | None = None
         self.setRenderHints(
             QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform
         )
@@ -213,13 +261,14 @@ class AnnotationCanvas(QGraphicsView):
         return -1
 
     def clear_image(self) -> None:
+        self.cancel_create_mode()
+        self._reset_delete_button()
         self._scene.clear()
         self._pixmap_item = None
         self._image_size = (0, 0)
         self._current_path = None
         self._box_items = []
         self._boxes = []
-        self.cancel_create_mode()
 
     def load_image(self, path: Path) -> bool:
         try:
@@ -229,6 +278,8 @@ class AnnotationCanvas(QGraphicsView):
             self.load_failed.emit(str(exc))
             return False
         qimage = bgr_to_qimage(image)
+        self.cancel_create_mode()
+        self._reset_delete_button()
         self._scene.clear()
         self._pixmap_item = self._scene.addPixmap(QPixmap.fromImage(qimage))
         self._pixmap_item.setZValue(-1000)
@@ -242,6 +293,7 @@ class AnnotationCanvas(QGraphicsView):
         return True
 
     def set_boxes(self, boxes: list[BoundingBox], review_threshold: float = 0.5) -> None:
+        self._hide_delete_button()
         for item in self._box_items:
             self._scene.removeItem(item)
         self._box_items.clear()
@@ -337,6 +389,76 @@ class AnnotationCanvas(QGraphicsView):
         self.boxes_edited.emit(self.boxes, -1)
         return True
 
+    def _ensure_delete_button(self) -> None:
+        if self._delete_button_item is not None:
+            return
+        button = DeleteBoxButtonItem(self)
+        self._scene.addItem(button)
+        button.hide()
+        self._delete_button_item = button
+
+    def _reset_delete_button(self) -> None:
+        self._delete_button_item = None
+
+    def _hide_delete_button(self) -> None:
+        if self._delete_button_item is not None:
+            self._delete_button_item.hide()
+
+    def position_delete_button(self, item: EditableBoxItem | None = None) -> None:
+        if item is None:
+            index = self.selected_index
+            item = self._box_items[index] if 0 <= index < len(self._box_items) else None
+        if item is None or not item.isSelected() or item.scene() is None:
+            self._hide_delete_button()
+            return
+
+        self._ensure_delete_button()
+        if self._delete_button_item is None:
+            return
+        rect = item.sceneBoundingRect().normalized()
+        width, height = self._image_size
+        scale = max(abs(self.transform().m11()), 1e-6)
+        button_width = 82.0 / scale
+        button_height = 30.0 / scale
+        gap = 7.0 / scale
+
+        # Prefer the outside-right side. If the frame touches the image edge,
+        # flip to the left, then above/below. This keeps all four resize handles clear.
+        if rect.right() + gap + button_width <= width:
+            x = rect.right() + gap
+            y = min(max(rect.top(), 0.0), max(0.0, height - button_height))
+        elif rect.left() - gap - button_width >= 0:
+            x = rect.left() - gap - button_width
+            y = min(max(rect.top(), 0.0), max(0.0, height - button_height))
+        elif rect.top() - gap - button_height >= 0:
+            x = min(max(rect.center().x() - button_width / 2, 0.0), max(0.0, width - button_width))
+            y = rect.top() - gap - button_height
+        else:
+            x = min(max(rect.center().x() - button_width / 2, 0.0), max(0.0, width - button_width))
+            y = min(rect.bottom() + gap, max(0.0, height - button_height))
+        self._delete_button_item.setPos(x, y)
+        self._delete_button_item.show()
+
+    def _editable_box_at(self, viewport_point) -> EditableBoxItem | None:
+        scene_point = self.mapToScene(viewport_point)
+        for scene_item in self._scene.items(scene_point):
+            current = scene_item
+            while current is not None:
+                if isinstance(current, EditableBoxItem):
+                    return current
+                current = current.parentItem()
+        return None
+
+    def _delete_button_at(self, viewport_point) -> bool:
+        if self._delete_button_item is None or not self._delete_button_item.isVisible():
+            return False
+        scene_item = self.itemAt(viewport_point)
+        while scene_item is not None:
+            if scene_item is self._delete_button_item:
+                return True
+            scene_item = scene_item.parentItem()
+        return False
+
     def set_box_class(self, index: int, class_id: int, class_name: str) -> None:
         if not 0 <= index < len(self._boxes):
             return
@@ -394,6 +516,7 @@ class AnnotationCanvas(QGraphicsView):
         self.boxes_edited.emit(self.boxes, len(self._boxes) - 1)
 
     def start_create_mode(self) -> None:
+        """Compatibility entry point; direct drawing no longer needs a mode."""
         if self._pixmap_item is None:
             return
         self._create_mode = True
@@ -412,6 +535,7 @@ class AnnotationCanvas(QGraphicsView):
     def fit_image(self) -> None:
         if self._pixmap_item is not None:
             self.fitInView(self._scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.position_delete_button()
 
     def viewport_to_image(self, point) -> QPointF:
         scene_point = self.mapToScene(point)
@@ -422,10 +546,24 @@ class AnnotationCanvas(QGraphicsView):
         )
 
     def _on_selection_changed(self) -> None:
+        self.position_delete_button()
         self.selection_changed.emit(self.selected_index)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        if self._create_mode and event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
+            point = event.position().toPoint()
+            if self._delete_button_at(point) or self._editable_box_at(point) is not None:
+                super().mousePressEvent(event)
+                return
+            scene_point = self.mapToScene(point)
+            image_rect = QRectF(0, 0, self._image_size[0], self._image_size[1])
+            if self._pixmap_item is None or not image_rect.contains(scene_point):
+                super().mousePressEvent(event)
+                return
+            self._scene.clearSelection()
+            self._create_mode = True
+            self.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.setCursor(Qt.CursorShape.CrossCursor)
             self._create_start = self.viewport_to_image(event.position().toPoint())
             self._draft_item = self._scene.addRect(
                 QRectF(self._create_start, self._create_start),
@@ -447,9 +585,10 @@ class AnnotationCanvas(QGraphicsView):
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
         if self._create_mode and self._create_start is not None and event.button() == Qt.MouseButton.LeftButton:
             current = self.viewport_to_image(event.position().toPoint())
-            rect = self.clamp_rect(QRectF(self._create_start, current))
+            raw_rect = QRectF(self._create_start, current).normalized()
+            rect = self.clamp_rect(raw_rect)
             self.cancel_create_mode()
-            if rect.width() >= 2 and rect.height() >= 2:
+            if raw_rect.width() >= 2 and raw_rect.height() >= 2:
                 self.new_box_requested.emit(rect)
             event.accept()
             return
@@ -459,6 +598,7 @@ class AnnotationCanvas(QGraphicsView):
         super().resizeEvent(event)
         if self._pixmap_item is not None:
             self.fit_image()
+            self.position_delete_button()
 
     def wheelEvent(self, event) -> None:  # noqa: N802
         if self._pixmap_item is None:
@@ -468,6 +608,7 @@ class AnnotationCanvas(QGraphicsView):
         target = current_scale * factor
         if 0.03 <= target <= 30:
             self.scale(factor, factor)
+            self.position_delete_button()
 
     def keyPressEvent(self, event) -> None:  # noqa: N802
         if event.key() == Qt.Key.Key_Delete and self.delete_selected():
