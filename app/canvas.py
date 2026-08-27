@@ -240,6 +240,8 @@ class AnnotationCanvas(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
 
     @property
     def image_size(self) -> tuple[int, int]:
@@ -521,7 +523,7 @@ class AnnotationCanvas(QGraphicsView):
             return
         self._create_mode = True
         self.setDragMode(QGraphicsView.DragMode.NoDrag)
-        self.setCursor(Qt.CursorShape.CrossCursor)
+        self.viewport().setCursor(Qt.CursorShape.CrossCursor)
 
     def cancel_create_mode(self) -> None:
         self._create_mode = False
@@ -530,7 +532,22 @@ class AnnotationCanvas(QGraphicsView):
             self._scene.removeItem(self._draft_item)
         self._draft_item = None
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.unsetCursor()
+        self.viewport().unsetCursor()
+
+    def _update_hover_cursor(self, viewport_point) -> None:
+        """Show a cross only over image pixels, not over the surrounding letterbox."""
+        if self._create_mode:
+            self.viewport().setCursor(Qt.CursorShape.CrossCursor)
+            return
+        if self._pixmap_item is None:
+            self.viewport().unsetCursor()
+            return
+        scene_point = self.mapToScene(viewport_point)
+        image_rect = QRectF(0, 0, self._image_size[0], self._image_size[1])
+        if image_rect.contains(scene_point):
+            self.viewport().setCursor(Qt.CursorShape.CrossCursor)
+        else:
+            self.viewport().unsetCursor()
 
     def fit_image(self) -> None:
         if self._pixmap_item is not None:
@@ -563,7 +580,7 @@ class AnnotationCanvas(QGraphicsView):
             self._scene.clearSelection()
             self._create_mode = True
             self.setDragMode(QGraphicsView.DragMode.NoDrag)
-            self.setCursor(Qt.CursorShape.CrossCursor)
+            self.viewport().setCursor(Qt.CursorShape.CrossCursor)
             self._create_start = self.viewport_to_image(event.position().toPoint())
             self._draft_item = self._scene.addRect(
                 QRectF(self._create_start, self._create_start),
@@ -575,6 +592,7 @@ class AnnotationCanvas(QGraphicsView):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        self._update_hover_cursor(event.position().toPoint())
         if self._create_mode and self._create_start is not None and self._draft_item is not None:
             current = self.viewport_to_image(event.position().toPoint())
             self._draft_item.setRect(self.clamp_rect(QRectF(self._create_start, current)))
@@ -588,11 +606,17 @@ class AnnotationCanvas(QGraphicsView):
             raw_rect = QRectF(self._create_start, current).normalized()
             rect = self.clamp_rect(raw_rect)
             self.cancel_create_mode()
+            self._update_hover_cursor(event.position().toPoint())
             if raw_rect.width() >= 2 and raw_rect.height() >= 2:
                 self.new_box_requested.emit(rect)
             event.accept()
             return
         super().mouseReleaseEvent(event)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802
+        if not self._create_mode:
+            self.viewport().unsetCursor()
+        super().leaveEvent(event)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)

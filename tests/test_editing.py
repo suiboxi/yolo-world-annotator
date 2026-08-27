@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtTest import QTest
 
@@ -102,6 +102,31 @@ def test_plain_click_does_not_create_tiny_box(qapp) -> None:
     QTest.mouseClick(canvas.viewport(), Qt.MouseButton.LeftButton, pos=point)
     qapp.processEvents()
     assert requested == []
+
+    canvas.close()
+    qapp.processEvents()
+
+
+def test_cursor_is_cross_only_over_loaded_image(qapp) -> None:
+    canvas = AnnotationCanvas()
+    canvas.resize(800, 400)
+    pixmap = QPixmap(400, 300)
+    pixmap.fill(QColor("white"))
+    canvas._pixmap_item = canvas._scene.addPixmap(pixmap)
+    canvas._pixmap_item.setZValue(-1000)
+    canvas._image_size = (400, 300)
+    canvas._scene.setSceneRect(0, 0, 400, 300)
+    canvas.show()
+    canvas.fit_image()
+    qapp.processEvents()
+
+    QTest.mouseMove(canvas.viewport(), canvas.mapFromScene(QPointF(200, 150)))
+    qapp.processEvents()
+    assert canvas.viewport().cursor().shape() == Qt.CursorShape.CrossCursor
+
+    QTest.mouseMove(canvas.viewport(), QPoint(10, 200))
+    qapp.processEvents()
+    assert canvas.viewport().cursor().shape() == Qt.CursorShape.ArrowCursor
 
     canvas.close()
     qapp.processEvents()
