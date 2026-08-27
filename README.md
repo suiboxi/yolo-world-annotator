@@ -4,7 +4,11 @@
 
 ## 启动
 
-双击 `启动GPU标注器.bat`，或运行：
+已经封装好的版本位于 `dist\YOLOWorldAnnotator\YOLOWorldAnnotator.exe`，双击该 EXE 即可启动，不需要再打开命令行。发布时必须保留整个 `YOLOWorldAnnotator` 文件夹，不能只单独复制 EXE；同级的 `_internal` 和 `models` 包含 GPU 运行库与模型权重。
+
+如需重新生成 EXE，双击 `一键生成EXE.bat`。构建完成后会自动检查程序文件、CUDA 依赖、CLIP 词表和默认权重是否齐全。
+
+源码方式仍可双击 `启动GPU标注器.bat`，或运行：
 
 ```powershell
 & "C:\Users\ROG\anaconda3\envs\yolo26\python.exe" main.py
@@ -58,7 +62,7 @@
 
 ## 验证
 
-已通过 42 项自动化测试（包含直接拖框、弹出按钮删除、205 张图批量稳定性回归）、离屏 GUI 启动，并使用本机 S/X 权重在 `cuda:0` 上完成真实图片推理。
+已通过 42 项自动化测试（包含直接拖框、弹出按钮删除、205 张图批量稳定性回归）、离屏 GUI 启动，并使用本机 S/X 权重在 `cuda:0` 上完成真实图片推理。EXE 发布包还经过了本机 RTX 4060 Laptop GPU 的界面启动和实际推理验证。
 
 ```powershell
 $env:QT_QPA_PLATFORM = "offscreen"

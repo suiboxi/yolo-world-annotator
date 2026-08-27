@@ -10,6 +10,8 @@ models/weights/*.pth
 
 # 运行时日志和临时文件。
 logs/
+build/
+dist/
 *.log
 *.tmp
 

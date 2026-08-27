@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 from time import monotonic
 
 import torch
@@ -239,7 +240,11 @@ class AnnotatorWindow(QMainWindow):
 
     @property
     def default_model_path(self) -> Path:
-        return Path(__file__).resolve().parents[1] / "models" / "weights" / "yolov8s-worldv2.pt"
+        if getattr(sys, "frozen", False):
+            app_root = Path(sys.executable).resolve().parent
+        else:
+            app_root = Path(__file__).resolve().parents[1]
+        return app_root / "models" / "weights" / "yolov8s-worldv2.pt"
 
     @property
     def weights_dir(self) -> Path:

@@ -13,6 +13,14 @@ os.environ["YOLO_CONFIG_DIR"] = str(_appdata / "YOLO26")
 os.environ.setdefault("QT_ENABLE_HIGHDPI_SCALING", "1")
 
 
+def app_log_dir() -> Path:
+    """Return a writable log directory for source and frozen builds."""
+    local_appdata = Path(
+        os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+    )
+    return local_appdata / "YOLOWorldAnnotator" / "logs"
+
+
 def main() -> int:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
@@ -77,7 +85,7 @@ def main() -> int:
     )
     app.setApplicationName("YOLO-World 数据集标注器")
     app.setOrganizationName("LocalYOLOTools")
-    configure_logging(Path(__file__).resolve().parent / "logs")
+    configure_logging(app_log_dir())
     window = AnnotatorWindow()
     window.show()
     return app.exec()
@@ -88,7 +96,8 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except Exception:
         details = traceback.format_exc()
-        error_path = Path(__file__).resolve().parent / "startup_error.log"
+        error_path = app_log_dir() / "startup_error.log"
+        error_path.parent.mkdir(parents=True, exist_ok=True)
         error_path.write_text(details, encoding="utf-8")
         try:
             import ctypes
