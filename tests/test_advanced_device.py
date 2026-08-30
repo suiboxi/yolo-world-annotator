@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import torch
+
 from yolo_world_annotator.app.inference_worker import InferenceWorker
 from yolo_world_annotator.app.settings_panel import SettingsPanel
 from yolo_world_annotator.models.model_manager import ModelManager
@@ -32,6 +34,19 @@ def test_advanced_settings_persist_device(qapp) -> None:
     assert panel.config_values()["device"] == "auto"
     panel.load_config({"device": "cpu"})
     assert panel.config_values()["device"] == "cpu"
+
+
+def test_advanced_settings_use_environment_and_list_all_gpus(qapp, monkeypatch) -> None:
+    monkeypatch.setenv("YOLO_WORLD_DEVICE", "cuda:2")
+    monkeypatch.setattr(torch.cuda, "device_count", lambda: 3)
+
+    panel = SettingsPanel()
+
+    assert panel.device_combo.findData("cuda:1") >= 0
+    assert panel.device_combo.findData("cuda:2") >= 0
+    assert panel.config_values()["device"] == "cuda:2"
+    panel.load_config({})
+    assert panel.config_values()["device"] == "cuda:2"
 
 
 def test_inference_worker_reloads_detector_when_device_changes(monkeypatch, tmp_path: Path) -> None:

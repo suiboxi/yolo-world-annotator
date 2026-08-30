@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 from html import escape
 
+import torch
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -82,7 +84,12 @@ class SettingsPanel(QWidget):
         self.device_combo = QComboBox()
         self.device_combo.addItem("Auto（优先 CUDA，回退 CPU）", "auto")
         self.device_combo.addItem("CPU", "cpu")
-        self.device_combo.addItem("CUDA 0", "cuda:0")
+        for index in range(max(1, int(torch.cuda.device_count()))):
+            self.device_combo.addItem(f"CUDA {index}", f"cuda:{index}")
+        initial_device = os.environ.get("YOLO_WORLD_DEVICE", "auto").strip().lower()
+        initial_index = self.device_combo.findData(initial_device)
+        if initial_index >= 0:
+            self.device_combo.setCurrentIndex(initial_index)
         self.load_model_button = QPushButton("加载模型")
         self.load_model_button.clicked.connect(self.load_model_requested)
         self.device_label = QLabel("推理设备：检测中…")
@@ -583,10 +590,11 @@ class SettingsPanel(QWidget):
         index = self.model_combo.findText(model)
         if index >= 0:
             self.model_combo.setCurrentIndex(index)
-        device = str(config.get("device", "auto"))
-        device_index = self.device_combo.findData(device)
-        if device_index >= 0:
-            self.device_combo.setCurrentIndex(device_index)
+        if "device" in config:
+            device = str(config["device"])
+            device_index = self.device_combo.findData(device)
+            if device_index >= 0:
+                self.device_combo.setCurrentIndex(device_index)
         self.set_classes(list(config.get("classes", [])))
         self.confidence_spin.setValue(float(config.get("confidence", 0.25)))
         self.iou_spin.setValue(float(config.get("iou", 0.45)))
