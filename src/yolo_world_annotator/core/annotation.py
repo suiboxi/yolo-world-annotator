@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 
@@ -21,7 +21,7 @@ def _as_bool(value: Any, default: bool = False) -> bool:
     return default
 
 
-class AnnotationStatus(StrEnum):
+class AnnotationStatus(str, Enum):
     UNLABELED = "UNLABELED"
     AUTO_LABELED = "AUTO_LABELED"
     VERIFIED = "VERIFIED"
