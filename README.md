@@ -1,6 +1,6 @@
 # YOLO-World 数据集自动标注器
 
-[![版本](https://img.shields.io/badge/版本-v0.0.1-2ea44f)](https://github.com/suiboxi/yolo-world-annotator/releases/tag/v0.0.1)
+[![版本](https://img.shields.io/badge/版本-v0.0.1-2ea44f)](https://github.com/suiboxi/yolo-world-annotator/tree/v0.0.1)
 [![持续集成](https://github.com/suiboxi/yolo-world-annotator/actions/workflows/ci.yml/badge.svg)](https://github.com/suiboxi/yolo-world-annotator/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10--3.12-3776ab)](https://www.python.org/)
 [![许可证](https://img.shields.io/badge/许可证-AGPL--3.0--or--later-blue)](LICENSE)
