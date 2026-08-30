@@ -31,7 +31,7 @@ dependencies = [
   "PySide6>=6.8,<7",
   "PyYAML>=6,<7",
   "torch>=2.2,<3",
-  "ultralytics>=8.4,<9",
+  "ultralytics>=8.4.127,<9",
 ]
 
 [project.optional-dependencies]

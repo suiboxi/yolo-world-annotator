@@ -97,3 +97,18 @@ def test_explicit_cuda_error_is_not_silently_changed_to_cpu(
 
     with pytest.raises(DeviceSelectionError, match="CUDA.*不可用"):
         yolo_world.YOLOWorldDetector(_weight(tmp_path), device="cuda")
+
+
+def test_detector_default_device_honors_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from yolo_world_annotator.models import yolo_world
+
+    monkeypatch.setenv("YOLO_WORLD_DEVICE", "cpu")
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(yolo_world, "YOLOWorld", _FakeYOLOWorld)
+
+    detector = yolo_world.YOLOWorldDetector(_weight(tmp_path))
+
+    assert detector.device_info.requested == "cpu"
+    assert detector.device == "cpu"

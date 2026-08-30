@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import sys
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -43,35 +42,18 @@ from yolo_world_annotator.core.history import HistoryManager
 from yolo_world_annotator.core.statistics import collect_statistics
 from yolo_world_annotator.core.verification import HUMAN_CONFIRMED, image_matches_filter
 from yolo_world_annotator.utils.config import as_bool, atomic_write_text
+from yolo_world_annotator.utils.device import resolve_device
 from yolo_world_annotator.utils.image_utils import discover_images
+from yolo_world_annotator.utils.paths import default_weights_dir
 
 LOGGER = logging.getLogger(__name__)
 APP_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _model_path_for_name(model_name: str) -> Path:
-    """Resolve bundled weights in source and PyInstaller layouts."""
+    """Resolve weights through the same portable policy as the default window."""
 
-    roots = [APP_ROOT]
-    if getattr(sys, "frozen", False):
-        roots.insert(0, Path(sys.executable).resolve().parent)
-        bundle_root = getattr(sys, "_MEIPASS", None)
-        if bundle_root:
-            roots.insert(0, Path(bundle_root))
-    seen: set[Path] = set()
-    candidates: list[Path] = []
-    for root in roots:
-        root = root.resolve()
-        if root in seen:
-            continue
-        seen.add(root)
-        candidates.append(root / "models" / "weights" / model_name)
-        candidates.append(root / "_internal" / "models" / "weights" / model_name)
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    # Let YOLO's normal download/error path handle a missing optional model.
-    return APP_ROOT / "models" / "weights" / model_name
+    return default_weights_dir() / model_name
 
 
 class MainWindow(QMainWindow):
@@ -211,6 +193,7 @@ class MainWindow(QMainWindow):
         self.settings.create_box_requested.connect(self.canvas.start_create_mode)
         self.settings.delete_box_requested.connect(self.canvas.delete_selected)
         self.settings.model_combo.currentTextChanged.connect(self._on_model_selection_changed)
+        self.settings.device_combo.currentIndexChanged.connect(self._on_device_selection_changed)
         self.settings.pause_button.clicked.connect(self.pause_batch)
         self.settings.resume_button.clicked.connect(self.resume_batch)
         self.settings.cancel_button.clicked.connect(self.cancel_batch)
@@ -290,18 +273,11 @@ class MainWindow(QMainWindow):
 
     def _update_device_label(self) -> None:
         try:
-            import torch
-
-            if torch.cuda.is_available():
-                self.settings.device_label.setText(
-                    f"GPU：{torch.cuda.get_device_name(0)}\nCUDA：Available\nDevice：cuda:0"
-                )
-            else:
-                self.settings.device_label.setText(
-                    "GPU：不可用\nCUDA：Unavailable\nDevice：cpu（已自动回退）"
-                )
+            requested = str(self.settings.device_combo.currentData() or "auto")
+            device = resolve_device(requested)
+            self.settings.device_label.setText(f"推理设备：{device.description}")
         except Exception as exc:
-            self.settings.device_label.setText(f"GPU 检测失败：{exc}\nDevice：cpu")
+            self.settings.device_label.setText(f"推理设备不可用：{exc}")
 
     def _append_qwen_log(self, message: str) -> None:
         """Append a worker-side Qwen/progress event without blocking inference."""
@@ -582,6 +558,7 @@ class MainWindow(QMainWindow):
         self.load_model_signal.emit(
             {
                 "model_path": str(model_path),
+                "device": config["device"],
                 "classes": classes,
                 **self._verification_payload(config),
                 "class_profiles": self._class_profiles_payload(classes),
@@ -648,6 +625,12 @@ class MainWindow(QMainWindow):
             self.model_loaded = False
             self.settings.busy_label.setText(f"已选择 {model_name}，请重新点击“加载模型”")
 
+    def _on_device_selection_changed(self, _index: int) -> None:
+        self._update_device_label()
+        if self.model_loaded:
+            self.model_loaded = False
+            self.settings.busy_label.setText("推理设备已更改，请重新点击“加载模型”")
+
     def _on_model_loaded(self, device_description: str) -> None:
         self.model_loaded = True
         self.settings.set_busy(False, f"模型已加载：{device_description}")
@@ -683,7 +666,7 @@ class MainWindow(QMainWindow):
             )
             if answer != QMessageBox.StandardButton.Yes:
                 return
-        self.settings.set_busy(True, f"正在使用 GPU 标注：{path.name}")
+        self.settings.set_busy(True, f"正在自动标注：{path.name}")
         self._pending_single_root = self.project.root if self.project is not None else None
         self._pending_single_path = path.resolve()
         config = self.settings.config_values()
@@ -828,7 +811,7 @@ class MainWindow(QMainWindow):
 
     def cancel_batch(self) -> None:
         self.inference_worker.request_cancel()
-        self.settings.busy_label.setText("正在取消；当前 GPU 推理结束后停止…")
+        self.settings.busy_label.setText("正在取消；当前推理结束后停止…")
 
     def _on_batch_paused(self, paused: bool) -> None:
         self.settings.pause_button.setEnabled(not paused)

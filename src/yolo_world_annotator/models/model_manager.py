@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 import torch
@@ -36,11 +37,27 @@ class ModelManager:
     def vlm_verifier(self) -> VLMVerifier | None:
         return self.vlm
 
-    def load_yolo(self, model_path: Path | str, classes: list[str]) -> YOLOWorldDetector:
+    def load_yolo(
+        self,
+        model_path: Path | str,
+        classes: list[str],
+        *,
+        device: str | None = None,
+    ) -> YOLOWorldDetector:
         path = Path(model_path).resolve()
+        device_request = str(device or "").strip().lower() or None
+        device_key = (
+            device_request
+            or os.environ.get("YOLO_WORLD_DEVICE", "auto").strip().lower()
+            or "auto"
+        )
         try:
-            if self.detector is None or self.detector.model_path != path:
-                self.detector = YOLOWorldDetector(path)
+            if (
+                self.detector is None
+                or self.detector.model_path != path
+                or self.detector.device_info.requested != device_key
+            ):
+                self.detector = YOLOWorldDetector(path, device=device_request)
             self.detector.set_classes(list(classes))
             self.last_errors.pop("yolo", None)
             return self.detector

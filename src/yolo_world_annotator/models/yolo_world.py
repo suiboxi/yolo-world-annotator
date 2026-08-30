@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 class YOLOWorldDetector(BaseDetector):
     """Persistent Ultralytics YOLO-World detector with portable device selection."""
 
-    def __init__(self, model_path: Path, *, device: str | None = "auto") -> None:
+    def __init__(self, model_path: Path, *, device: str | None = None) -> None:
         self.device_info: DeviceInfo = resolve_device(device)
         model_path = model_path.expanduser().resolve()
         model_path.parent.mkdir(parents=True, exist_ok=True)

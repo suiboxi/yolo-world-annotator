@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from copy import deepcopy
@@ -60,9 +61,19 @@ class InferenceWorker(QObject):
     def load_model(self, payload: dict) -> None:
         try:
             model_path = Path(payload["model_path"])
+            device_request = str(payload.get("device") or "").strip().lower() or None
+            device_key = (
+                device_request
+                or os.environ.get("YOLO_WORLD_DEVICE", "auto").strip().lower()
+                or "auto"
+            )
             self._emit_qwen_log(f"模型准备：{model_path.name}，类别 {len(payload.get('classes', []))} 个")
-            if self.detector is None or self.detector.model_path != model_path.resolve():
-                self.detector = YOLOWorldDetector(model_path)
+            if (
+                self.detector is None
+                or self.detector.model_path != model_path.resolve()
+                or self.detector.device_info.requested != device_key
+            ):
+                self.detector = YOLOWorldDetector(model_path, device=device_request)
             classes = list(payload["classes"])
             self.detector.set_classes(classes)
             self._configure_siglip(payload, classes)

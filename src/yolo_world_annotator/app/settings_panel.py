@@ -79,23 +79,29 @@ class SettingsPanel(QWidget):
         self.model_combo.addItems(
             ["yolov8s-worldv2.pt", "yolov8m-worldv2.pt", "yolov8l-worldv2.pt"]
         )
+        self.device_combo = QComboBox()
+        self.device_combo.addItem("Auto（优先 CUDA，回退 CPU）", "auto")
+        self.device_combo.addItem("CPU", "cpu")
+        self.device_combo.addItem("CUDA 0", "cuda:0")
         self.load_model_button = QPushButton("加载模型")
         self.load_model_button.clicked.connect(self.load_model_requested)
-        self.device_label = QLabel("GPU：检测中…")
+        self.device_label = QLabel("推理设备：检测中…")
         self.device_label.setWordWrap(True)
         self.model_combo.setToolTip(
             "选择 YOLO-World 模型。s 速度快、显存占用低；m/l 精度更高但更慢。"
         )
         self.load_model_button.setToolTip(
-            "应用当前模型和类别配置。导入数据集后会自动加载，也可在这里手动重新加载。"
+            "应用当前模型、设备和类别配置。"
         )
-        self.device_label.setToolTip("显示当前 PyTorch 是否检测到 CUDA GPU，以及实际推理设备。")
+        self.device_combo.setToolTip("Auto 在 CUDA 可用时使用显卡，否则自动使用 CPU。")
+        self.device_label.setToolTip("显示当前选择解析出的实际推理设备。")
         model_layout.addWidget(self.model_combo)
+        model_layout.addWidget(self.device_combo)
         model_layout.addWidget(self.load_model_button)
         model_layout.addWidget(self.device_label)
         model_layout.addWidget(
             self._help_label(
-                "说明：导入数据集后会自动加载所选模型；如果显示 CUDA Available，程序会优先使用显卡。"
+                "说明：Auto 会优先使用 CUDA 显卡；不可用时自动回退到 CPU。"
             )
         )
 
@@ -529,6 +535,7 @@ class SettingsPanel(QWidget):
                 per_class_thresholds[name.strip()] = threshold
         return {
             "model": self.model_combo.currentText(),
+            "device": str(self.device_combo.currentData() or "auto"),
             "classes": self.classes(),
             "confidence": self.confidence_spin.value(),
             "iou": self.iou_spin.value(),
@@ -576,6 +583,10 @@ class SettingsPanel(QWidget):
         index = self.model_combo.findText(model)
         if index >= 0:
             self.model_combo.setCurrentIndex(index)
+        device = str(config.get("device", "auto"))
+        device_index = self.device_combo.findData(device)
+        if device_index >= 0:
+            self.device_combo.setCurrentIndex(device_index)
         self.set_classes(list(config.get("classes", [])))
         self.confidence_spin.setValue(float(config.get("confidence", 0.25)))
         self.iou_spin.setValue(float(config.get("iou", 0.45)))
@@ -658,6 +669,7 @@ class SettingsPanel(QWidget):
 
     def set_busy(self, busy: bool, message: str = "") -> None:
         self.model_combo.setEnabled(not busy)
+        self.device_combo.setEnabled(not busy)
         self.load_model_button.setEnabled(not busy)
         self.annotate_current_button.setEnabled(not busy)
         self.annotate_all_button.setEnabled(not busy)
@@ -666,6 +678,7 @@ class SettingsPanel(QWidget):
 
     def set_batch_running(self, running: bool) -> None:
         self.model_combo.setEnabled(not running)
+        self.device_combo.setEnabled(not running)
         self.load_model_button.setEnabled(not running)
         self.annotate_current_button.setEnabled(not running)
         self.annotate_all_button.setEnabled(not running)
