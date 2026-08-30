@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: python -m ruff check
+        language: system
+        types: [python]
+      - id: pytest
+        name: focused unit tests
+        entry: python -m pytest -q tests/test_device.py tests/test_yolo_world_device.py tests/test_cli.py
+        language: system
+        pass_filenames: false

@@ -54,7 +54,7 @@ def test_cpu_detector_uses_float32_ultralytics_inference(
             "iou": 0.45,
             "imgsz": 640,
             "device": "cpu",
-            "half": False,
+            "quantize": 32,
             "verbose": False,
         }
     ]
@@ -81,7 +81,8 @@ def test_cuda_detector_uses_requested_device_and_float16(
 
     call = _FakeYOLOWorld.instances[0].predict_calls[0]
     assert call["device"] == "cuda:1"
-    assert call["half"] is True
+    assert call["quantize"] == 16
+    assert "half" not in call
     assert detector.device_description == "Test GPU 1 / cuda:1 / 12.0 GiB / float16"
 
 

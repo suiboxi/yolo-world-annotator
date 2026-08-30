@@ -5,12 +5,16 @@ from pathlib import Path
 import torch
 from PIL import Image
 
-from core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
-from core.dataset import DatasetProject
-from core.evaluation import evaluate_ab
-from core.hard_samples import append_hard_sample, load_hard_samples, record_auto_issues
-from core.verification import AUTO_ACCEPT, REVIEW, SigLIPPrediction, fuse_box
-from models.siglip_verifier import SigLIPVerifier
+from yolo_world_annotator.core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
+from yolo_world_annotator.core.dataset import DatasetProject
+from yolo_world_annotator.core.evaluation import evaluate_ab
+from yolo_world_annotator.core.hard_samples import (
+    append_hard_sample,
+    load_hard_samples,
+    record_auto_issues,
+)
+from yolo_world_annotator.core.verification import AUTO_ACCEPT, REVIEW, SigLIPPrediction, fuse_box
+from yolo_world_annotator.models.siglip_verifier import SigLIPVerifier
 
 
 def test_siglip_crop_padding_is_bounded() -> None:
@@ -150,7 +154,7 @@ def test_main_window_review_filter_keeps_path_index_mapping(qapp, tmp_path: Path
         (40, 40),
     )
 
-    from app.main_window import MainWindow
+    from yolo_world_annotator.app.main_window import MainWindow
 
     window = MainWindow()
     try:

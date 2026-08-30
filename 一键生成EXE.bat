@@ -1,12 +1,14 @@
 @echo off
 chcp 65001 >nul
-set "BUILD_PYTHON=C:\Users\ROG\anaconda3\envs\yolo26\python.exe"
-"%BUILD_PYTHON%" "%~dp0build_exe.py"
-if errorlevel 1 (
+pushd "%~dp0"
+python build_exe.py
+set "BUILD_EXIT_CODE=%ERRORLEVEL%"
+popd
+if not "%BUILD_EXIT_CODE%"=="0" (
     echo.
     echo EXE build failed. Check the error above.
     pause
-    exit /b 1
+    exit /b %BUILD_EXIT_CODE%
 )
 echo.
 echo EXE build completed.

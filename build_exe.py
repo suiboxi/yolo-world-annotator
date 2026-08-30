@@ -1,46 +1,62 @@
+"""Build and validate the Windows PyInstaller distribution."""
+
 from __future__ import annotations
 
+import argparse
 import shutil
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-
-import PyInstaller.__main__
-
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 APP_DIR = PROJECT_ROOT / "dist" / "YOLOWorldAnnotator"
 APP_EXE = APP_DIR / "YOLOWorldAnnotator.exe"
 
 
-def main() -> int:
-    PyInstaller.__main__.run(
-        [
-            "--noconfirm",
-            "--clean",
-            str(PROJECT_ROOT / "YOLOWorldAnnotator.spec"),
-        ]
-    )
-
-    weight_target = APP_DIR / "models" / "weights"
-    weight_target.mkdir(parents=True, exist_ok=True)
-    for source in (PROJECT_ROOT / "models" / "weights").iterdir():
-        if source.is_file() and source.suffix.lower() in {".pt", ".pth"}:
-            shutil.copy2(source, weight_target / source.name)
-    shutil.copy2(PROJECT_ROOT / "README.md", APP_DIR / "README.md")
-
+def check_sources() -> None:
     required = [
-        APP_EXE,
-        APP_DIR / "_internal" / "PySide6" / "shiboken6.abi3.dll",
-        APP_DIR / "_internal" / "clip" / "bpe_simple_vocab_16e6.txt.gz",
-        weight_target / "yolov8s-worldv2.pt",
+        PROJECT_ROOT / "pyproject.toml",
+        PROJECT_ROOT / "README.md",
+        PROJECT_ROOT / "LICENSE",
+        PROJECT_ROOT / "YOLOWorldAnnotator.spec",
+        PROJECT_ROOT / "src" / "yolo_world_annotator" / "__main__.py",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
-        raise RuntimeError("Build is incomplete; missing: " + ", ".join(missing))
-    for name in ("icuuc.dll", "icudt73.dll"):
-        if (APP_DIR / "_internal" / name).exists():
-            raise RuntimeError(f"Conflicting Qt dependency was bundled: {name}")
+        raise RuntimeError("Build sources are incomplete; missing: " + ", ".join(missing))
 
+
+def build() -> None:
+    if sys.platform != "win32":
+        raise RuntimeError("The bundled desktop artifact currently supports Windows only.")
+    try:
+        import PyInstaller.__main__
+    except ImportError as exc:
+        raise RuntimeError("Install build dependencies with: pip install -e .[build]") from exc
+
+    PyInstaller.__main__.run(
+        ["--noconfirm", "--clean", str(PROJECT_ROOT / "YOLOWorldAnnotator.spec")]
+    )
+    shutil.copy2(PROJECT_ROOT / "README.md", APP_DIR / "README.md")
+    shutil.copy2(PROJECT_ROOT / "LICENSE", APP_DIR / "LICENSE")
+
+    required = [APP_EXE, APP_DIR / "README.md", APP_DIR / "LICENSE"]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise RuntimeError("Build is incomplete; missing: " + ", ".join(missing))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check-only", action="store_true", help="validate build inputs without PyInstaller"
+    )
+    args = parser.parse_args(argv)
+    check_sources()
+    if args.check_only:
+        print("Build inputs are complete.")
+        return 0
+    build()
     print(f"Build complete: {APP_EXE}")
     print("Keep the whole YOLOWorldAnnotator folder together.")
     return 0

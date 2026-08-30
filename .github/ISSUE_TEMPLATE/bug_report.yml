@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible application or packaging problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: checkboxes
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed private images, paths, and credentials from this report.
+          required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Include exact steps, expected behavior, and actual behavior.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Device mode
+      options: [auto, cpu, cuda, "cuda:N", not applicable]
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Environment
+      description: OS, Python, torch, ultralytics, GPU, and driver versions.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Logs
+      render: shell

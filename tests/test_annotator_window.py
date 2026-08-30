@@ -4,10 +4,11 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import torch
 from PySide6.QtCore import QRectF
 
-from app.annotator_window import AnnotatorWindow
-from core.annotation import BoundingBox
+from yolo_world_annotator.app.annotator_window import AnnotatorWindow
+from yolo_world_annotator.core.annotation import BoundingBox
 
 
 def _write_image(path: Path) -> None:
@@ -45,3 +46,19 @@ def test_window_edits_are_saved_next_to_image(qapp, tmp_path: Path) -> None:
     assert label_path.read_text(encoding="utf-8") == ""
     window.close()
     qapp.processEvents()
+
+
+def test_window_keeps_inference_enabled_when_auto_selects_cpu(
+    qapp, monkeypatch
+) -> None:
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+
+    window = AnnotatorWindow()
+    try:
+        assert window.device_combo.currentData() == "auto"
+        assert window.auto_current_button.isEnabled()
+        assert window.auto_all_button.isEnabled()
+        assert "CPU" in window.device_value.text()
+    finally:
+        window.close()
+        qapp.processEvents()

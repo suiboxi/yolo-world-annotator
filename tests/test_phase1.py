@@ -6,11 +6,11 @@ import cv2
 import numpy as np
 from PySide6.QtWidgets import QMessageBox
 
-from app.canvas import AnnotationCanvas
-from app.main_window import MainWindow
-from core.dataset import DatasetProject
-from core.annotation import BoundingBox
-from utils.image_utils import discover_images, read_image
+from yolo_world_annotator.app.canvas import AnnotationCanvas
+from yolo_world_annotator.app.main_window import MainWindow
+from yolo_world_annotator.core.annotation import BoundingBox
+from yolo_world_annotator.core.dataset import DatasetProject
+from yolo_world_annotator.utils.image_utils import discover_images, read_image
 
 
 def _write_unicode_image(path: Path, width: int = 320, height: int = 200) -> None:
@@ -65,6 +65,7 @@ def test_invalid_existing_label_is_write_protected(qapp, tmp_path: Path, monkeyp
         staticmethod(lambda *args, **kwargs: QMessageBox.StandardButton.Cancel),
     )
     window = MainWindow()
+    monkeypatch.setattr(window, "load_model", lambda: None)
     try:
         window.open_project(project.images_dir)
         assert image_path.resolve() in window.label_load_failed_paths
@@ -74,7 +75,9 @@ def test_invalid_existing_label_is_write_protected(qapp, tmp_path: Path, monkeyp
         window.close()
 
 
-def test_stale_inference_result_cannot_write_into_new_project(qapp, tmp_path: Path) -> None:
+def test_stale_inference_result_cannot_write_into_new_project(
+    qapp, tmp_path: Path, monkeypatch
+) -> None:
     first = DatasetProject(tmp_path / "first")
     second = DatasetProject(tmp_path / "second")
     first_image = first.images_dir / "same_name.jpg"
@@ -82,8 +85,11 @@ def test_stale_inference_result_cannot_write_into_new_project(qapp, tmp_path: Pa
     _write_unicode_image(first_image)
     _write_unicode_image(second_image)
     window = MainWindow()
+    automatic_loads: list[bool] = []
+    monkeypatch.setattr(window, "load_model", lambda: automatic_loads.append(True))
     try:
         window.open_project(first.root)
+        assert automatic_loads == []
         window._pending_single_root = first.root
         window._pending_single_path = first_image.resolve()
         window.open_project(second.root)

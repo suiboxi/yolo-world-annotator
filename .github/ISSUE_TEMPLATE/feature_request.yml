@@ -1,0 +1,21 @@
+name: Feature request
+description: Propose a focused improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful solution and its user-visible result.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives and constraints
+      description: Include CPU/GPU, platform, model-size, or licensing constraints.

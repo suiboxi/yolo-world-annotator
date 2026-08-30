@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 
-from app.inference_worker import InferenceWorker
+from yolo_world_annotator.app.inference_worker import InferenceWorker
 
 
 class FakeDetector:

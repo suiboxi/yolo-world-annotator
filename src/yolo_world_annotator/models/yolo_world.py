@@ -7,10 +7,9 @@ import torch
 from ultralytics import YOLOWorld
 from ultralytics.utils.downloads import attempt_download_asset
 
-from core.annotation import BoundingBox
+from yolo_world_annotator.core.annotation import BoundingBox
 from yolo_world_annotator.models.base import BaseDetector
 from yolo_world_annotator.utils.device import DeviceInfo, resolve_device
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ class YOLOWorldDetector(BaseDetector):
                 iou=float(iou),
                 imgsz=int(imgsz),
                 device=self.device,
-                half=self.device_info.use_half,
+                quantize=16 if self.device_info.use_half else 32,
                 verbose=False,
             )
         except torch.cuda.OutOfMemoryError as exc:

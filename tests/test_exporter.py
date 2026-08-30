@@ -6,10 +6,10 @@ import cv2
 import numpy as np
 import yaml
 
-from core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
-from core.dataset import DatasetProject
-from core.exporter import export_yolo_dataset
-from core.statistics import collect_statistics
+from yolo_world_annotator.core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
+from yolo_world_annotator.core.dataset import DatasetProject
+from yolo_world_annotator.core.exporter import export_yolo_dataset
+from yolo_world_annotator.core.statistics import collect_statistics
 
 
 def _make_project(root: Path, count: int = 5) -> DatasetProject:

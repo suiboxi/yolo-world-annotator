@@ -4,7 +4,7 @@ from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
-from app.annotator_window import (
+from yolo_world_annotator.app.annotator_window import (
     AnnotatorWindow,
     NoWheelComboBox,
     NoWheelDoubleSpinBox,

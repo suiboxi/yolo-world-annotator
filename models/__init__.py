@@ -1,2 +1,0 @@
-"""Detector implementations."""
-

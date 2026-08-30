@@ -7,9 +7,9 @@ import cv2
 import numpy as np
 import pytest
 
-from core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
-from core.dataset import DatasetProject
-from core.yolo_format import parse_yolo, serialize_yolo, xyxy_to_yolo
+from yolo_world_annotator.core.annotation import AnnotationStatus, BoundingBox, ImageAnnotation
+from yolo_world_annotator.core.dataset import DatasetProject
+from yolo_world_annotator.core.yolo_format import parse_yolo, serialize_yolo, xyxy_to_yolo
 
 
 def test_xyxy_yolo_round_trip() -> None:

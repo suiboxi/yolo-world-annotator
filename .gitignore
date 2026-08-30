@@ -3,10 +3,17 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.venv/
+venv/
+*.egg-info/
+.worktrees/
 
 # 本机下载的模型权重体积很大，不进入源码版本库。
-models/weights/*.pt
-models/weights/*.pth
+models/weights/**
+weights/**
 
 # 运行时日志和临时文件。
 logs/
@@ -14,6 +21,9 @@ build/
 dist/
 *.log
 *.tmp
+*.exe
+*.dll
+*.pyd
 
 # 编辑器与系统文件。
 .vscode/

@@ -4,9 +4,9 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtTest import QTest
 
-from app.canvas import AnnotationCanvas
-from core.annotation import BoundingBox
-from core.history import HistoryManager
+from yolo_world_annotator.app.canvas import AnnotationCanvas
+from yolo_world_annotator.core.annotation import BoundingBox
+from yolo_world_annotator.core.history import HistoryManager
 
 
 def _box(x1=10, y1=20, x2=110, y2=120) -> BoundingBox:

@@ -1,26 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_all, collect_data_files, get_package_paths
 
 
 project_root = Path(SPECPATH)
+source_root = project_root / "src"
 ultra_datas, ultra_binaries, ultra_hiddenimports = collect_all("ultralytics")
 clip_datas = collect_data_files("clip")
-pyside_dir = Path(get_package_paths("PySide6")[1])
-shiboken_dir = Path(get_package_paths("shiboken6")[1])
 
-# PySide6 6.11 needs these DLLs on its own Windows DLL search path.
-qt_runtime_binaries = [
-    (str(shiboken_dir / "shiboken6.abi3.dll"), "PySide6"),
-    (str(pyside_dir / "concrt140.dll"), "PySide6"),
-    (str(pyside_dir / "msvcp140_codecvt_ids.dll"), "PySide6"),
-]
+qt_runtime_binaries = []
+if sys.platform == "win32":
+    pyside_dir = Path(get_package_paths("PySide6")[1])
+    shiboken_dir = Path(get_package_paths("shiboken6")[1])
+    for candidate in (
+        shiboken_dir / "shiboken6.abi3.dll",
+        pyside_dir / "concrt140.dll",
+        pyside_dir / "msvcp140_codecvt_ids.dll",
+    ):
+        if candidate.is_file():
+            qt_runtime_binaries.append((str(candidate), "PySide6"))
 
 a = Analysis(
-    [str(project_root / "main.py")],
-    pathex=[str(project_root)],
+    [str(source_root / "yolo_world_annotator" / "__main__.py")],
+    pathex=[str(source_root)],
     binaries=[*ultra_binaries, *qt_runtime_binaries],
     datas=[*ultra_datas, *clip_datas],
     hiddenimports=ultra_hiddenimports,
@@ -32,13 +37,11 @@ a = Analysis(
     optimize=0,
 )
 
-# Conda's ICU 73 exports a different ABI from the Windows ICU expected by
-# PySide6 6.11. If bundled, QtCore fails with WinError 127. On this Windows 11
-# target Qt must use the compatible system ICU instead.
-conflicting_icu = {"icuuc.dll", "icudt73.dll"}
-a.binaries = type(a.binaries)(
-    item for item in a.binaries if Path(item[0]).name.lower() not in conflicting_icu
-)
+if sys.platform == "win32":
+    conflicting_icu = {"icuuc.dll", "icudt73.dll"}
+    a.binaries = type(a.binaries)(
+        item for item in a.binaries if Path(item[0]).name.lower() not in conflicting_icu
+    )
 
 pyz = PYZ(a.pure)
 

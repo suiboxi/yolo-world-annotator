@@ -4,12 +4,21 @@ from pathlib import Path
 
 from PIL import Image
 
-from core.annotation import BoundingBox
-from core.class_profiles import ensure_class_profiles, load_class_profiles
-from core.decision_engine import DecisionEngine, DecisionState
-from inference.merge_utils import bbox_iou, merge_detections
-from inference.sahi_runner import SAHIConfig, SAHIInferenceRunner, generate_tiles
-from models.vlm_verifier import MATCH, UNCERTAIN, VLMVerifier, parse_vlm_response
+from yolo_world_annotator.core.annotation import BoundingBox
+from yolo_world_annotator.core.class_profiles import ensure_class_profiles, load_class_profiles
+from yolo_world_annotator.core.decision_engine import DecisionEngine, DecisionState
+from yolo_world_annotator.inference.merge_utils import bbox_iou, merge_detections
+from yolo_world_annotator.inference.sahi_runner import (
+    SAHIConfig,
+    SAHIInferenceRunner,
+    generate_tiles,
+)
+from yolo_world_annotator.models.vlm_verifier import (
+    MATCH,
+    UNCERTAIN,
+    VLMVerifier,
+    parse_vlm_response,
+)
 
 
 def test_sahi_tiles_cover_edges_and_merge_same_class() -> None:

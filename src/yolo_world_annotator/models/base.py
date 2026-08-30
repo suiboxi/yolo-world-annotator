@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from core.annotation import BoundingBox
+from yolo_world_annotator.core.annotation import BoundingBox
 
 
 class BaseDetector(ABC):
