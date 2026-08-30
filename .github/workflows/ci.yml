@@ -18,7 +18,6 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     env:
       QT_QPA_PLATFORM: offscreen
-      YOLO_WORLD_DEVICE: cpu
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
