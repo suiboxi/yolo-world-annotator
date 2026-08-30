@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from time import monotonic
 
+import torch
 from PySide6.QtCore import QObject, QRectF, QSettings, Qt, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
@@ -379,7 +380,8 @@ class AnnotatorWindow(QMainWindow):
         self.device_combo = NoWheelComboBox()
         self.device_combo.addItem("自动（优先 CUDA，否则 CPU）", "auto")
         self.device_combo.addItem("CPU（兼容模式）", "cpu")
-        self.device_combo.addItem("CUDA 0", "cuda:0")
+        for index in range(max(1, int(torch.cuda.device_count()))):
+            self.device_combo.addItem(f"CUDA {index}", f"cuda:{index}")
         initial_device = os.environ.get("YOLO_WORLD_DEVICE", "auto").strip().lower()
         initial_index = self.device_combo.findData(initial_device)
         if initial_index < 0 and initial_device.startswith("cuda:"):

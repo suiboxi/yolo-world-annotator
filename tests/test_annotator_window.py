@@ -62,3 +62,17 @@ def test_window_keeps_inference_enabled_when_auto_selects_cpu(
     finally:
         window.close()
         qapp.processEvents()
+
+
+def test_window_lists_every_detected_cuda_device(qapp, monkeypatch) -> None:
+    monkeypatch.setenv("YOLO_WORLD_DEVICE", "cpu")
+    monkeypatch.setattr(torch.cuda, "device_count", lambda: 3)
+
+    window = AnnotatorWindow()
+    try:
+        assert window.device_combo.findData("cuda:0") >= 0
+        assert window.device_combo.findData("cuda:1") >= 0
+        assert window.device_combo.findData("cuda:2") >= 0
+    finally:
+        window.close()
+        qapp.processEvents()
