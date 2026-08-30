@@ -125,11 +125,11 @@ Expected: selected GUI tests pass。
 - Modify: all production and test imports.
 
 **Interfaces:**
-- Produces: `yolo_world_annotator.__version__ == "0.1.0"`；`cli.main(argv: Sequence[str] | None = None) -> int`；console script `yolo-world-annotator`。
+- Produces: `yolo_world_annotator.__version__ == "0.0.1"`；`cli.main(argv: Sequence[str] | None = None) -> int`；console script `yolo-world-annotator`。
 
 - [ ] **Step 1: 写失败测试**
 
-测试 `main(["--version"])` 输出 `0.1.0` 且返回 0；测试 `parse_args(["--device", "cpu"])` 得到 `cpu`；测试非法设备由 argparse 返回非零。测试不创建 QApplication。
+测试 `main(["--version"])` 输出 `0.0.1` 且返回 0；测试 `parse_args(["--device", "cpu"])` 得到 `cpu`；测试非法设备由 argparse 返回非零。测试不创建 QApplication。
 
 - [ ] **Step 2: 运行并确认 RED**
 
@@ -149,7 +149,7 @@ Run: `python -m pip install -e . --no-deps`
 
 Run: `python -m yolo_world_annotator --version`
 
-Expected: tests pass，安装成功，输出 `0.1.0`。
+Expected: tests pass，安装成功，输出 `0.0.1`。
 
 ### Task 5: 依赖、启动和 Windows 构建
 

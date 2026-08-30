@@ -4,6 +4,10 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-08-30
+
+Initial open-source release.
+
 ### Added
 
 - Automatic CUDA/CPU selection with explicit `cpu` and `cuda:N` overrides.
@@ -16,7 +20,3 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - Model loading no longer starts merely by opening an advanced-window project.
 - Windows launch and build scripts no longer contain a personal Python path.
 - Windows builds no longer bundle large model weights by default.
-
-## [0.1.0] - 2026-08-30
-
-Initial open-source candidate release.

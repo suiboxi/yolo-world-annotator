@@ -7,7 +7,7 @@ def test_cli_reports_version_without_starting_qt(capsys) -> None:
     from yolo_world_annotator.cli import main
 
     assert main(["--version"]) == 0
-    assert capsys.readouterr().out.strip() == "yolo-world-annotator 0.1.0"
+    assert capsys.readouterr().out.strip() == "yolo-world-annotator 0.0.1"
 
 
 def test_cli_accepts_explicit_cpu_device() -> None:
